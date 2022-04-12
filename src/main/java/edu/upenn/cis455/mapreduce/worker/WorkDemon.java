@@ -14,25 +14,42 @@ public class WorkDemon implements Runnable{
     private static Logger logger = LogManager.getLogger(WorkDemon.class);
 
     List<String> results;
-    TopologyContext context;
+    TopologyContext context = new TopologyContext();
     int port;
     String masterUrl;
     String tmp = "http://%s/workerstatus?port=%s&status=%s&job=%s&keysRead=%s&keysWritten=%s&results=%s";
-    volatile boolean run = true;
+    static volatile boolean run = true;
     String job = "errorJob";
 
     public void setJob(String job) {
         this.job = job;
     }
 
-    public WorkDemon(TopologyContext context, int port, String master) {
+    public void setContext(TopologyContext context) {
         this.context = context;
+    }
+
+    public WorkDemon(int port, String master) {
         results = new ArrayList<>();
         this.port = port;
         masterUrl = master;
     }
 
-
+    public String formatResultToString(){
+        List<String>  res = new ArrayList<>();
+        for(String s : context.getResults()){
+            res.add(s);
+            if(res.size() > 100) break;
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        for(String s : res){
+            sb.append(s).append(",");
+        }
+        sb.append("]");
+        logger.info(sb);
+        return sb.toString();
+    }
     @Override
     public void run() {
         while (run){
@@ -44,7 +61,15 @@ public class WorkDemon implements Runnable{
                 keysRead = context.getReduceInputs();
                 keysWritten = context.getReduceOutputs();
             }
-            String getUrl = String.format(tmp, masterUrl, port, context.getState(), job, keysRead, keysWritten, context.getResults().subList(0, 100));
+            List<String>  res = new ArrayList<>();
+            for(String s : context.getResults()){
+                res.add(s);
+                if(res.size() > 100) break;
+            }
+
+            if(masterUrl == null) masterUrl = "localhost:45555";
+            String getUrl = String.format(tmp, masterUrl, port, context.getState(), job, keysRead, keysWritten, res.toString().replaceAll("\\s", ""));
+            logger.info("url： {}", getUrl);
             try {
                 URL url = new URL(getUrl);
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -52,15 +77,29 @@ public class WorkDemon implements Runnable{
                 connection.connect();
                 logger.info(connection.getResponseMessage());
                 connection.disconnect();
-            } catch (IOException e) {
+                logger.info("Worker {} reported.", port);
+
+
+            } catch (IOException  e) {
                 logger.error("open connection wrong");
+                try {
+                    Thread.sleep(10000);
+                } catch (InterruptedException ex) {
+                    ex.printStackTrace();
+                }
+
+            }
+            try {
+                Thread.sleep(10000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
 
         }
 
     }
 
-    public void shutdown(){
+    public static void shutdown(){
         run = false;
     }
 }

@@ -13,7 +13,9 @@ import edu.upenn.cis.stormlite.distributed.WorkerJob;
 import edu.upenn.cis.stormlite.spout.FileSpout;
 import edu.upenn.cis.stormlite.spout.WordFileSpout;
 import edu.upenn.cis.stormlite.tuple.Fields;
+import edu.upenn.cis455.mapreduce.worker.WorkDemon;
 import edu.upenn.cis455.mapreduce.worker.WorkerServer;
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -57,7 +59,7 @@ public class MasterServer {
             singleWorkerInfo.put("port", port);
             singleWorkerInfo.put("ip-port", ipPort);
             singleWorkerInfo.put("status", status);
-            singleWorkerInfo.put("jobs",job);
+            singleWorkerInfo.put("job",job);
             singleWorkerInfo.put("keysRead", keysRead);
             singleWorkerInfo.put("keysWritten", keysWritten);
             singleWorkerInfo.put("results", results);
@@ -73,7 +75,7 @@ public class MasterServer {
         get("/status", (request, response) -> {
             response.type("text/html");
             String head = "<html><head><title>Master</title></head>\n" +
-                    "<body>Hi, I am the master!</body></html>";
+                    "<body><h1>Hi, I am the master!</h1><br/>\n";
             StringBuilder res = new StringBuilder(head);
 
             int n = 0;
@@ -83,7 +85,7 @@ public class MasterServer {
                 String status = "status=" + singleWorker.get("status");
                 String job = "job=" + singleWorker.get("job");
                 String keysRead = "keysRead=" + singleWorker.get("keysRead");
-                String keysWritten = "keysWritten=" + singleWorker.get("kesingleWorkerysWritten");
+                String keysWritten = "keysWritten=" + singleWorker.get("keysWritten");
                 String results = "results=" + singleWorker.get("results");
                 String info = String.join(", ", port, status, job, keysRead, keysWritten, results);
                 res.append(id).append(info).append("<br>");
@@ -92,15 +94,17 @@ public class MasterServer {
 
 
             String form = "<form method=\"POST\" action=\"/submitjob\">\n" +
-                    "    Job Name: <input type=\"text\" name=\"jobname\"/><br/>\n" +
-                    "    Class Name: <input type=\"text\" name=\"classname\"/><br/>\n" +
-                    "    Input Directory: <input type=\"text\" name=\"input\"/><br/>\n" +
-                    "    Output Directory: <input type=\"text\" name=\"output\"/><br/>\n" +
-                    "    Map Threads: <input type=\"text\" name=\"map\"/><br/>\n" +
-                    "    Reduce Threads: <input type=\"text\" name=\"reduce\"/><br/>\n" +
+                    "    Job Name: <input type=\"text\" name=\"jobname\" value=\"WordCount\"/><br/>\n" +
+                    "    Class Name: <input type=\"text\" name=\"classname\" value=\"edu.upenn.cis455.mapreduce.job.WordCount\"/><br/>\n" +
+                    "    Input Directory: <input type=\"text\" name=\"input\" value=\"input\"/><br/>\n" +
+                    "    Output Directory: <input type=\"text\" name=\"output\" value=\"\"/><br/>\n" +
+                    "    Map Threads: <input type=\"text\" name=\"map\" value=\"2\"/><br/>\n" +
+                    "    Reduce Threads: <input type=\"text\" name=\"reduce\" value=\"1\"/><br/>\n" +
+                    "    <input type=\"submit\" value=\"Submit Job\" value=\"John\"> <br/>\n"+
                     "</form>";
 
             res.append(form);
+            res.append("</body></html>");
             return res.toString();
 
         });
@@ -122,8 +126,9 @@ public class MasterServer {
             for(String workerIpPort : workersMap.keySet()){
                 workerList.add(workerIpPort);
             }
-            logger.info(workerList);
 
+            logger.info("workerList: {}", workerList);
+            if(workerList.size() == 0) return "No worker";
             logger.info("************ Creating the Config  ***************");
 
             Config config = new Config();
@@ -146,7 +151,7 @@ public class MasterServer {
             config.put("reduceExecutors", reduce);
 
             //input output relative to the storage directory
-            config.put("storage", "./");
+            config.putIfAbsent("storage", "./");
             config.put("input", input);
             config.put("output", output);
 
@@ -258,6 +263,8 @@ public class MasterServer {
 
 
     public static void main(String[] args) {
+        org.apache.logging.log4j.core.config.Configurator.setLevel("edu.upenn", Level.DEBUG);
+
         if (args.length < 1) {
             System.out.println("Usage: MasterServer [port number]");
             System.exit(1);

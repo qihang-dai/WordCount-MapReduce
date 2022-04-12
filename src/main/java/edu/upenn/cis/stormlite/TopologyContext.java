@@ -66,6 +66,9 @@ public class TopologyContext {
 		topology = topo;
 		taskQueue = theTaskQueue;
 	}
+	public TopologyContext() {
+
+	}
 	
 	public Topology getTopology() {
 		return topology;

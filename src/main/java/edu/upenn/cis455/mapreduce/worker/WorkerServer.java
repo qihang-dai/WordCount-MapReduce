@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -57,18 +58,21 @@ public class WorkerServer {
         final ObjectMapper om = new ObjectMapper();
         om.enableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL);
 
+        WorkDemon demon = new WorkDemon(myPort, master);
+        new Thread(demon).start();
 
         Spark.post("/definejob", (req, res) -> {
 
             WorkerJob workerJob;
             try {
                 workerJob = om.readValue(req.body(), WorkerJob.class);
-
+                workerJob.getConfig().put("storage", storage);
                 try {
                     log.info("Processing job definition request" + workerJob.getConfig().get("job") +
                             " on machine " + workerJob.getConfig().get("workerIndex"));
                     contexts.add(cluster.submitTopology(workerJob.getConfig().get("job"), workerJob.getConfig(), 
                             workerJob.getTopology()));
+                    demon.setContext(contexts.get(contexts.size() - 1));
 
                     // Add a new topology
                     synchronized (topologies) {
@@ -79,10 +83,7 @@ public class WorkerServer {
                     e.printStackTrace();
                 }
 
-                TopologyContext ourContext = contexts.get(contexts.size() - 1);
-                WorkDemon demon = new WorkDemon(ourContext, myPort, master);
                 demon.setJob(workerJob.getConfig().get("job"));
-                new Thread(demon).start();
 
                 return "Job launched";
             } catch (IOException e) {
@@ -170,6 +171,7 @@ public class WorkerServer {
         }
 
         cluster.shutdown();
+        WorkDemon.shutdown();
     }
 
     /**
@@ -180,6 +182,8 @@ public class WorkerServer {
      * @throws MalformedURLException
      */
     public static void main(String args[]) throws MalformedURLException {
+        org.apache.logging.log4j.core.config.Configurator.setLevel("edu.upenn", Level.DEBUG);
+        System.out.println("*************args length" + args.length);
         if (args.length < 3) {
             System.out.println("Usage: WorkerServer [port number] [master host/IP]:[master port] [storage directory]");
             System.exit(1);

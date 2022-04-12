@@ -41,7 +41,7 @@ public class ConsensusTracker {
 		if (voter != null && !voter.isEmpty()) {
 			// This is to help you debug
 			if (voteReceivedFrom.contains(voter)) {
-				throw new RuntimeException("Executor " + voter + " already voted EOS!");
+				System.out.println("Executor " + voter + " already voted EOS!");
 			} else
 				voteReceivedFrom.add(voter);
 		}

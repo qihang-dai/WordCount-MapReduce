@@ -34,6 +34,7 @@ public class BerkeleyDB {
 
     public BerkeleyDB(String directory) {
         this.directory = directory;
+        logger.info(directory);
         Config(directory);
     }
 

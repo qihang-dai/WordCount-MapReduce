@@ -92,7 +92,7 @@ public class PrintBolt implements IRichBolt {
 			log.error("deleteIfExists error");
 		}
 		try {
-			Files.createDirectory(Paths.get(outputDir));
+			Files.createFile(Paths.get(outputDir));
 		} catch (IOException e) {
 			e.printStackTrace();
 			log.error("create file error");

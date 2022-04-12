@@ -32,7 +32,7 @@ public class PrintBolt implements IRichBolt {
      * instance of the PrintBolt, aka each "executor"
      */
     String executorId = UUID.randomUUID().toString();
-
+	TopologyContext context;
 	@Override
 	public void cleanup() {
 		// Do nothing
@@ -43,13 +43,14 @@ public class PrintBolt implements IRichBolt {
 	public boolean execute(Tuple input) {
 		if (!input.isEndOfStream())
 			System.out.println(getExecutorId() + ": " + input.toString());
-		
+		else context.setState(TopologyContext.STATE.IDLE);
 		return true;
 	}
 
 	@Override
 	public void prepare(Map<String, String> stormConf, TopologyContext context, OutputCollector collector) {
 		// Do nothing
+		this.context = context;
 	}
 
 	@Override

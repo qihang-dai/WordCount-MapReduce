@@ -70,6 +70,7 @@ public class TestMapReduce {
         config.put("spoutExecutors", "1");
         config.put("mapExecutors", "1");
         config.put("reduceExecutors", "1");
+		config.put("storage", "/");
         
     }
 
@@ -88,7 +89,7 @@ public class TestMapReduce {
 		Config config = new Config();
         
         // Complete list of workers, comma-delimited
-        config.put("workerList", "[127.0.0.1:8088,127.0.0.1:8001,127.0.0.1:8002]");
+        config.put("workerList", "[127.0.0.1:8088]");
 
         // Build the local worker
         
@@ -100,7 +101,7 @@ public class TestMapReduce {
         WorkerServer.createWorker(config);
 
         // If we're the Master, we need to initiate the computation
-        if (args.length > 1) {
+        if (true) {
         	MasterServer.registerStatusPage();
         	
 			// Let the server start up

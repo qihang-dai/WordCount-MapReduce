@@ -6,6 +6,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 public class WordFileSpout extends FileSpout {
 	static Logger log = LogManager.getLogger(WordFileSpout.class);
@@ -20,16 +23,20 @@ public class WordFileSpout extends FileSpout {
 			return "words.txt";
 		}
 		String realDir = String.format("./%s/%s/", storage, input);
+		String direc = new File(realDir).getAbsolutePath();
+
+		log.info("absolute storage: {}", direc);
 		String[] files = new File(realDir).list();
 		for(String filename : files){
 			String[] names = filename.split("\\.");
-			if(names.length == 2){
-				realName = names[0] + "." +names[1];
-			}else{
+			if(names.length == 1){
 				realName = names[0];
+			}else{
+				realName = names[0] + "." +names[1];
+
 			}
 		}
-		String res = storage + realName;
+		String res = realDir + realName;
 
 		log.info(res);
 		return res;
