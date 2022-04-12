@@ -1,6 +1,7 @@
 package edu.upenn.cis.stormlite.distributed;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -89,7 +90,6 @@ public class SenderBolt implements IRichBolt {
     /**
      * Sends the data along a socket
      * 
-     * @param stream
      * @param tuple
      * @throws IOException 
      */
@@ -103,6 +103,13 @@ public class SenderBolt implements IRichBolt {
 		String jsonForTuple = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(tuple);
 		
 		// TODO: send this to /pushdata/{stream} as a POST!
+		conn.setRequestMethod("POST");
+		conn.setDoOutput(true);
+
+		OutputStream out = conn.getOutputStream();
+		out.write(jsonForTuple.getBytes());
+		out.flush();
+
 
 		///////////
 		

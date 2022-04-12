@@ -154,6 +154,20 @@
 						</configuration>
 					</execution>
 					<!-- TODO: run worker2 -->
+					<execution>
+						<id>worker2</id>
+						<goals>
+							<goal>java</goal>
+						</goals>
+						<configuration>
+							<mainClass>edu.upenn.cis455.mapreduce.worker.WorkerServer</mainClass>
+							<arguments>
+								<argument>8002</argument>
+								<argument>localhost:45555</argument>
+								<argument>storage/node2</argument>
+							</arguments>
+						</configuration>
+					</execution>
 				</executions>
 				<configuration>
 					<mainClass>edu.upenn.cis455.mapreduce.master.MasterServer</mainClass>

@@ -3,6 +3,7 @@ package edu.upenn.cis.stormlite.bolt;
 import java.util.Map;
 import java.util.UUID;
 
+import edu.upenn.cis455.mapreduce.worker.WorkerServer;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
@@ -42,6 +43,7 @@ import edu.upenn.cis455.mapreduce.Job;
  */
 
 public class MapBolt implements IRichBolt {
+
 	static Logger log = LogManager.getLogger(MapBolt.class);
 
 	Job mapJob;
@@ -100,6 +102,13 @@ public class MapBolt implements IRichBolt {
         
         // TODO: determine how many end-of-stream requests are needed, create a ConsensusTracker
         // or whatever else you need to determine when votes reach consensus
+		int spoutAmount = Integer.valueOf(stormConf.get("spoutExecutors"));
+		int mapAmount = Integer.valueOf(stormConf.get("mapExecutors"));
+		int workerAmount = WorkerHelper.getWorkers(stormConf).length;
+		log.info("worker Amount: {}", workerAmount);
+		//NotSure
+		int voteNeed = spoutAmount * mapAmount * (workerAmount - 1) + spoutAmount;
+		votesForEos = new ConsensusTracker(voteNeed);
 
     }
 
@@ -119,11 +128,18 @@ public class MapBolt implements IRichBolt {
 	        }
 	        
 	        // TODO:  call the mapper, and do bookkeeping to track work done
-
-    	} else if (input.isEndOfStream()) {
+			context.incMapInputs();
+			mapJob.map(key, value, collector, executorId);
+			context.setState(TopologyContext.STATE.MAPPING);
+			context.incMapOutputs();
+		} else if (input.isEndOfStream()) {
     		// TODO: determine what to do with EOS messages / votes
     		log.debug("Processing EOS from " + input.getSourceExecutor());
-
+			boolean sentEos = votesForEos.voteForEos(executorId);
+			if(sentEos){
+				collector.emitEndOfStream(executorId);
+				context.setState(TopologyContext.STATE.IDLE);
+			}
     	}
     	return true;
     }

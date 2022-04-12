@@ -25,8 +25,9 @@ public class RunJobRoute implements Route {
 		log.info("Starting job!");
 
 		// TODO: start the topology on the DistributedCluster, which should start the dataflow
-		
-		
+
+		this.cluster.startTopology();
+		log.info("DistributedCluster started");
 		return "Started";
 	}
 

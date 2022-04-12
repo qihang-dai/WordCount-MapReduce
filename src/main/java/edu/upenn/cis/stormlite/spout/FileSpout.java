@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 
+import edu.upenn.cis.stormlite.Config;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
@@ -65,7 +66,9 @@ public abstract class FileSpout implements IRichSpout {
     
     int inx = 0;
     boolean sentEof = false;
-    
+
+    Config config;
+
     public FileSpout() {}
     
     public abstract String getFilename();
@@ -80,7 +83,7 @@ public abstract class FileSpout implements IRichSpout {
     public void open(Map conf, TopologyContext context,
                      SpoutOutputCollector collector) {
         this.collector = collector;
-        
+        this.config = (Config) conf;
         try {
             filename = getFilename() + "." + conf.get("workerIndex");
             log.debug("Starting spout for " + filename +
@@ -91,6 +94,7 @@ public abstract class FileSpout implements IRichSpout {
             e.printStackTrace();
         }
     }
+
 
     /**
      * Shut down the spout

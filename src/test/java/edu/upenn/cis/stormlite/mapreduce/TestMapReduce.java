@@ -7,6 +7,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -82,7 +83,9 @@ public class TestMapReduce {
      * @throws Exception
      */
     public static void main(String[] args) throws Exception {
-        Config config = new Config();
+		org.apache.logging.log4j.core.config.Configurator.setLevel("edu.upenn", Level.DEBUG);
+
+		Config config = new Config();
         
         // Complete list of workers, comma-delimited
         config.put("workerList", "[127.0.0.1:8088,127.0.0.1:8001,127.0.0.1:8002]");

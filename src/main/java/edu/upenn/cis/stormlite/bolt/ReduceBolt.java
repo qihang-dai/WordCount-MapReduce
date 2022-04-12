@@ -1,10 +1,9 @@
 package edu.upenn.cis.stormlite.bolt;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
+import edu.upenn.cis.stormlite.distributed.WorkerHelper;
+import edu.upenn.cis.stormlite.storage.BerkeleyDB;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -74,6 +73,8 @@ public class ReduceBolt implements IRichBolt {
     private TopologyContext context;
     
     int neededVotesToComplete = 0;
+
+	private BerkeleyDB db;
     
     public ReduceBolt() {
     }
@@ -82,10 +83,14 @@ public class ReduceBolt implements IRichBolt {
      * Initialization, just saves the output stream destination
      */
     @Override
-    public void prepare(Map<String,String> stormConf, 
-    		TopologyContext context, OutputCollector collector) {
-        this.collector = collector;
+    public void prepare(Map<String,String> stormConf, TopologyContext context, OutputCollector collector) {
+
+		this.collector = collector;
         this.context = context;
+
+		String dir = "./" + stormConf.get("storage") + "/";
+		db = new BerkeleyDB(dir);
+
 
         if (!stormConf.containsKey("reduceClass"))
         	throw new RuntimeException("Mapper class is not specified as a config option");
@@ -106,6 +111,13 @@ public class ReduceBolt implements IRichBolt {
 
         // TODO: determine how many EOS votes needed and set up ConsensusTracker (or however
         // you want to handle consensus)
+		int reduceAmount = Integer.valueOf(stormConf.get("reduceExecutors"));
+		int mapAmount = Integer.valueOf(stormConf.get("mapExecutors"));
+		int workerAmount = WorkerHelper.getWorkers(stormConf).length;
+		log.info("worker Amount: {}", workerAmount);
+		//NotSure
+		int voteNeed = reduceAmount * mapAmount * (workerAmount - 1) + mapAmount;
+		votesForEos = new ConsensusTracker(voteNeed);
     }
 
     /**
@@ -127,10 +139,29 @@ public class ReduceBolt implements IRichBolt {
     		
     		// You may find votesForEos useful to determine when consensus is reacked
 
+			sentEos = votesForEos.voteForEos(executorId);
+			if(sentEos){
+				for(String key : db.keySet()){
+					List<String> values = db.getWordObj(key).getValues();
+					reduceJob.reduce(key, values.iterator(), collector, executorId);
+					context.incReduceOutputs();
+				}
+				context.setState(TopologyContext.STATE.IDLE);
+				db.close();
+			}else{
+				log.info("not enough vote");
+			}
+
     	} else {
     		// TODO: collect the tuples by key into BerkeleyDB (until EOS arrives, in the above condition)
     		log.debug("Processing " + input.toString() + " from " + input.getSourceExecutor());
-    		
+			String key = input.getStringByField("key");
+			String value = input.getStringByField("value");
+			context.incReduceInputs();
+			context.setState(TopologyContext.STATE.REDUCING);
+			db.addKeyValue(key, value);
+
+
     	}        
     	return true;
     }

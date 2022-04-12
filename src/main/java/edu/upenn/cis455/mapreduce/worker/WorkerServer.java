@@ -38,6 +38,17 @@ public class WorkerServer {
 
     static List<String> topologies = new ArrayList<>();
 
+    String master;
+    String storage;
+
+    public void setMaster(String master) {
+        this.master = master;
+    }
+
+    public void setStorage(String storage) {
+        this.storage = storage;
+    }
+
     public WorkerServer(int myPort) throws MalformedURLException {
 
         log.info("Creating server listener at socket " + myPort);
@@ -45,6 +56,8 @@ public class WorkerServer {
         port(myPort);
         final ObjectMapper om = new ObjectMapper();
         om.enableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL);
+
+
         Spark.post("/definejob", (req, res) -> {
 
             WorkerJob workerJob;
@@ -65,6 +78,12 @@ public class WorkerServer {
                     // TODO Auto-generated catch block
                     e.printStackTrace();
                 }
+
+                TopologyContext ourContext = contexts.get(contexts.size() - 1);
+                WorkDemon demon = new WorkDemon(ourContext, myPort, master);
+                demon.setJob(workerJob.getConfig().get("job"));
+                new Thread(demon).start();
+
                 return "Job launched";
             } catch (IOException e) {
                 e.printStackTrace();
@@ -95,11 +114,17 @@ public class WorkerServer {
                 TopologyContext ourContext = contexts.get(contexts.size() - 1);
 
                 // Instrumentation for tracking progress
-                if (!tuple.isEndOfStream())
-                    ourContext.incSendOutputs(router.getKey(tuple.getValues()));
-
                 // TODO: handle tuple vs end of stream for our *local nodes only*
                 // Please look at StreamRouter and its methods (execute, executeEndOfStream, executeLocally, executeEndOfStreamLocally)
+                if (!tuple.isEndOfStream()){
+                    ourContext.incSendOutputs(router.getKey(tuple.getValues()));
+                    router.executeLocally(tuple, ourContext, "");
+                }else{
+                    router.executeEndOfStreamLocally(ourContext, "");
+                }
+                res.status(200);
+
+
 
                 return "OK";
             } catch (IOException e) {
@@ -161,12 +186,18 @@ public class WorkerServer {
         }
 
         int myPort = Integer.valueOf(args[0]);
+        String master = args[1];
+        String storage = args[2];
+
 
         System.out.println("Worker node startup, on port " + myPort);
 
         WorkerServer worker = new WorkerServer(myPort);
+        worker.setMaster(master);
+        worker.setStorage(storage);
 
         // TODO: you may want to adapt parts of edu.upenn.cis.stormlite.mapreduce.TestMapReduce
         // here
+
     }
 }

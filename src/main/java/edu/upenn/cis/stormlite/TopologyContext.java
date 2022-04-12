@@ -17,9 +17,7 @@
  */
 package edu.upenn.cis.stormlite;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Queue;
+import java.util.*;
 
 import edu.upenn.cis.stormlite.routers.StreamRouter;
 import edu.upenn.cis.stormlite.tasks.ITask;
@@ -41,16 +39,29 @@ public class TopologyContext {
 	STATE state = STATE.INIT;
 	
 	int mapOutputs = 0;
+
+	int mapInputs = 0;
+	int reduceInputs = 0;
 	
 	int reduceOutputs = 0;
-	
+
+	List<String> results = new ArrayList<>();
+
 	Map<String, Integer> sendOutputs = new HashMap<>();
 	
 	/**
 	 * Mappings from stream IDs to routers
 	 */
 	Map<String,StreamRouter> next = new HashMap<>();
-	
+
+	public List<String> getResults() {
+		return results;
+	}
+
+	public void addResult(String res) {
+		this.results.add(res);
+	}
+
 	public TopologyContext(Topology topo, Queue<ITask> theTaskQueue) {
 		topology = topo;
 		taskQueue = theTaskQueue;
@@ -80,18 +91,32 @@ public class TopologyContext {
 		return mapOutputs;
 	}
 
-	public void incMapOutputs(String key) {
+	public void incMapOutputs() {
 		this.mapOutputs++;
+	}
+	public int getMapInputs() {
+		return mapInputs;
+	}
+
+	public void incMapInputs() {
+		this.mapInputs++;
 	}
 
 	public int getReduceOutputs() {
 		return reduceOutputs;
 	}
 
-	public void incReduceOutputs(String key) {
+	public void incReduceOutputs() {
 		this.reduceOutputs++;
 	}
-	
+
+	public int getReduceInputs() {
+		return reduceInputs;
+	}
+
+	public void incReduceInputs() {
+		this.reduceInputs++;
+	}
 	public void incSendOutputs(String key) {
 		 if (!sendOutputs.containsKey(key))
 			 sendOutputs.put(key, Integer.valueOf(0));
@@ -102,5 +127,6 @@ public class TopologyContext {
 	public Map<String, Integer> getSendOutputs() {
 		return sendOutputs;
 	}
-	
+
+
 }
